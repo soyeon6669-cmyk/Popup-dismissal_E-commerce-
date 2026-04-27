@@ -8,14 +8,10 @@
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "wdwwi9d715");
   </script>
-
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Dismissal Shop Prototype</title>
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dismissal Shop Prototype</title>
     <script src="https://cdn.tailwindcss.com"></script>
-  
     <script>
       tailwind.config = {
         theme: {
@@ -94,6 +90,25 @@
         [DISMISSAL.BACKDROP]: "화면 탭",
         [DISMISSAL.CLOSE_BUTTON]: "닫기 버튼",
         [DISMISSAL.AUTO]: "타이머",
+      };
+
+      // [수정] 5단계 사용성 평가용 과업과 해제방식을 사용자가 지정한 상품명 순서로 재구성
+      const UX_TASKS = [
+        // [수정] 각 단계는 과업 제시 → 제품 탐색 중 랜덤 팝업 해제 → 목표 상품 장바구니 담기 흐름으로 연결됨
+        { mode: DISMISSAL.SWIPE, search: "play 448c 볼캡", targetTitle: "PLAY 448C 볼캡 · 로얄 블루", message: "해당 제품을 탐색한 뒤 ‘PLAY 448C 볼캡 · 로얄 블루’를 장바구니에 담아주세요." },
+        { mode: DISMISSAL.SCROLL, search: "코듀로이 오버핏 자켓", targetTitle: "코듀로이 오버핏 자켓 · 민트 블루", message: "해당 제품을 탐색한 뒤 ‘코듀로이 오버핏 자켓 · 민트 블루’를 장바구니에 담아주세요." },
+        { mode: DISMISSAL.BACKDROP, search: "우니코 플라워 카라비너 키링", targetTitle: "우니코 플라워 카라비너 키링 · 블랙", message: "해당 제품을 탐색한 뒤 ‘우니코 플라워 카라비너 키링 · 블랙’을 장바구니에 담아주세요." },
+        { mode: DISMISSAL.CLOSE_BUTTON, search: "와이드 히든 밴딩 슬랙스", targetTitle: "와이드 히든 밴딩 슬랙스 [블랙]", message: "해당 제품을 탐색한 뒤 ‘와이드 히든 밴딩 슬랙스 [블랙]’를 장바구니에 담아주세요." },
+        { mode: DISMISSAL.AUTO, search: "슈퍼스타", targetTitle: "슈퍼스타 - 블랙:화이트 / EG4959", message: "해당 제품을 탐색한 뒤 ‘슈퍼스타 - 블랙:화이트 / EG4959’를 장바구니에 담아주세요." },
+      ];
+
+      // [수정] 각 해제방식별 안내 문장을 실제 조작 방식에 맞게 분리
+      const DISMISSAL_INSTRUCTION = {
+        [DISMISSAL.SWIPE]: "팝업을 좌우 방향으로 밀어내면 닫힙니다.",
+        [DISMISSAL.SCROLL]: "페이지를 아래로 스크롤하면 팝업이 닫힙니다.",
+        [DISMISSAL.BACKDROP]: "팝업 바깥의 어두운 영역을 탭하면 닫힙니다.",
+        [DISMISSAL.CLOSE_BUTTON]: "팝업 우측 상단의 × 버튼을 클릭하면 닫힙니다.",
+        [DISMISSAL.AUTO]: "10초가 지나면 나타나는 × 버튼을 클릭하면 닫힙니다.",
       };
 
       const SHOP_CATEGORY_LABEL = {
@@ -249,7 +264,7 @@
         );
       }
 
-      function ShopTopBar({ view, title, query, setQuery, onSearch, onBack, cartCount, onCart }) {
+      function ShopTopBar({ view, title, query, setQuery, onSearch, onBack, cartCount, onCart, task }) {
         return (
           <div className="sticky top-0 z-40 bg-white/85 backdrop-blur border-b border-neutral-200">
             <div className="mx-auto max-w-[980px] px-4 py-3 flex items-center gap-3">
@@ -288,7 +303,7 @@
                           if (e.key === "Enter") onSearch();
                         }}
                         className="w-full bg-transparent text-sm outline-none"
-                        placeholder="결과 내 재검색"
+                        placeholder={task ? `제품 탐색어 입력: ${task.search}` : "결과 내 탐색"}
                       />
                     </div>
                   </div>
@@ -297,7 +312,7 @@
                     className="shrink-0 rounded-2xl bg-neutral-900 text-white px-3 py-2 text-sm font-semibold active:scale-[0.99] transition"
                     onClick={onSearch}
                   >
-                    검색
+                    탐색
                   </button>
                 </>
               ) : (
@@ -575,7 +590,7 @@
         const meta = PRODUCT_META[p.image] || { options: ["FREE"], desc: p.title, specs: [] };
 
         return (
-          <div className="mx-auto max-w-[980px] px-4 pb-28">
+          <div className="mx-auto max-w-[980px] px-4 pt-[148px] pb-28">
             <div className="pt-4 grid gap-4 md:grid-cols-[360px_1fr] lg:grid-cols-[420px_1fr]">
 
               {/* 왼쪽: 이미지 + 태그 */}
@@ -709,6 +724,92 @@
           </div>
         );
       }
+      // [수정] 과업 제시 전 상단 알림창을 먼저 보여주는 안내 컴포넌트 추가
+      function TaskStartNotice({ task, step, total, onShowTask }) {
+        if (!task) return null;
+        return (
+          <div className="fixed left-0 right-0 top-[72px] z-[80] px-4 pointer-events-none">
+            <div className="mx-auto max-w-[980px] rounded-3xl bg-black/95 backdrop-blur ring-2 ring-white/20 shadow-card p-4 pointer-events-auto text-white">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-black text-black">
+                    사용성 평가 안내 {step + 1}/{total}
+                  </div>
+                  <div className="mt-2 text-[15px] font-black leading-relaxed text-white">
+                    지금부터 다음 상품 탐색 과업을 진행합니다.
+                  </div>
+                  <div className="mt-1 text-xs leading-relaxed text-white/80">
+                    아래 버튼을 누르면 과업 내용이 상단에 표시됩니다. 과업을 진행하는 중간에 팝업이 나타납니다.
+                  </div>
+                </div>
+                <button
+                  className="shrink-0 rounded-2xl bg-white px-4 py-3 text-sm font-black text-black active:scale-[0.99] transition"
+                  onClick={onShowTask}
+                >
+                  과업 확인하기
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // [수정] 피험자에게 자유 탐색 대신 단계별 구체 과업을 제시하는 안내 배너
+      function TaskBanner({ task, step, total, popupOpen, popupCompleted }) {
+        if (!task) return null;
+        return (
+          // [수정] 과업 안내가 잘 보이도록 화면 상단 고정 팝업창 형태로 변경
+          <div className="fixed left-0 right-0 top-[72px] z-[70] px-4 pointer-events-none">
+            {/* [수정] 과업창 배경을 검정색으로 변경하고 글씨를 흰색으로 통일 */}
+            <div className="mx-auto max-w-[980px] rounded-3xl bg-black/95 backdrop-blur ring-2 ring-white/20 shadow-card p-4 pointer-events-auto text-white">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-black text-black">{awaitingNextModeSelection ? `다음 과업 선택 대기 ${Math.min((pendingNextStep ?? step) + 1, total)}/${total}` : `사용성 평가 과업 ${step + 1}/${total}`}</div>
+                  <div className="mt-2 text-[15px] font-black leading-relaxed text-white">{task.message}</div>
+                  <div className="mt-2 text-xs text-white/80">현재 팝업 해제방식: <span className="font-black text-white">{DISMISSAL_LABEL[task.mode]}</span> · {DISMISSAL_INSTRUCTION[task.mode]}</div>
+                </div>
+                <div className={["shrink-0 rounded-full px-3 py-1 text-[11px] font-black", popupOpen ? "bg-rose-500 text-white" : "bg-white/15 text-white"].join(" ")}>
+                  {popupOpen ? "팝업 해제 중" : popupCompleted ? "팝업 해제 완료" : "과업 진행"}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+
+      // [수정] 과업 완료 후 바로 다음 과업으로 넘기지 않고 오른쪽 패널 선택을 안내하는 완료 모달
+      function NextTaskModal({ open, completedStep, nextTask, isLast, onContinue, onFinish }) {
+        if (!open) return null;
+        return (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4">
+            <div className="w-full max-w-[520px] rounded-3xl bg-white p-5 shadow-card ring-1 ring-neutral-200">
+              <div className="inline-flex rounded-full bg-neutral-900 px-3 py-1 text-xs font-black text-white">과업 {completedStep + 1} 완료</div>
+              <div className="mt-3 text-lg font-black text-neutral-900">
+                {isLast ? "5가지 팝업 해제방식 평가가 모두 완료되었습니다." : "과업이 완료되었습니다."}
+              </div>
+              <div className="mt-2 text-sm leading-relaxed text-neutral-600">
+                {isLast
+                  ? "모든 상품 과업과 팝업 해제가 완료되었습니다. 장바구니 화면에서 결과를 확인할 수 있습니다."
+                  : "확인 버튼을 누른 뒤 하단 오른쪽 패널에서 다음 팝업 해제방식을 선택해주세요. 선택이 완료되면 다음 과업으로 이어집니다."}
+              </div>
+              {!isLast && nextTask ? (
+                <div className="mt-4 rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-800 ring-1 ring-neutral-200">
+                  <div className="font-black">다음 과업 안내</div>
+                  <div className="mt-1 leading-relaxed">다음 상품 과업은 해제방식을 선택한 뒤 표시됩니다.</div>
+                </div>
+              ) : null}
+              <button
+                className="mt-5 w-full rounded-2xl bg-black px-4 py-3 text-sm font-black text-white active:scale-[0.99] transition"
+                onClick={isLast ? onFinish : onContinue}
+              >
+                {isLast ? "장바구니 확인하기" : "확인"}
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       function CartPage({ items, productsById, onClose, onChangeQty, onRemove, onCheckout, onGoDetail }) {
         const rows = Object.entries(items)
           .map(([id, qty]) => ({ p: productsById[id], id, qty }))
@@ -742,7 +843,7 @@
         };
 
         return (
-          <div className="mx-auto max-w-[980px] px-4 pb-40">
+          <div className="mx-auto max-w-[980px] px-4 pt-[148px] pb-40">
             <div className="pt-4 space-y-3">
               <div className="rounded-2xl bg-white ring-1 ring-emerald-200 p-4">
                 <div className="flex items-center justify-between">
@@ -863,25 +964,45 @@
         );
       }
 
-      function FloatingPanel({ mode, setMode }) {
+      function FloatingPanel({ mode, setMode, task, step, total, popupOpen, popupCompleted, awaitingNextModeSelection, pendingNextStep }) {
         return (
-          <div className="fixed bottom-4 right-4 z-40">
-            <div className="rounded-2xl bg-white/90 backdrop-blur shadow-card ring-1 ring-neutral-200 px-3 py-3 w-[220px]">
-              <div className="text-xs font-bold text-neutral-700">UX 테스트 패널</div>
-              <div className="mt-2 text-[11px] text-neutral-500">팝업 해제 방식 선택</div>
-              <select
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-                className="mt-2 w-full rounded-xl bg-neutral-100 ring-1 ring-neutral-200 px-3 py-2 text-sm font-semibold outline-none"
-              >
-                <option value={DISMISSAL.SWIPE}>밀어내기</option>
-                <option value={DISMISSAL.SCROLL}>스크롤</option>
-                <option value={DISMISSAL.BACKDROP}>화면 탭</option>
-                <option value={DISMISSAL.CLOSE_BUTTON}>닫기 버튼</option>
-                <option value={DISMISSAL.AUTO}>타이머</option>
-              </select>
-              <div className="mt-2 text-[11px] text-neutral-500 leading-snug">
-                모드 선택 후 상품을 탐색하면<br />3~5초 뒤 또는 일정 스크롤에서 팝업이 뜹니다.
+          <div className="fixed bottom-4 left-4 right-4 z-40 pointer-events-none">
+            {/* [수정] 과업 안내를 처음부터 팝업 해제방식 선택 창의 왼쪽 영역에 배치 */}
+            <div className="mx-auto grid max-w-[980px] grid-cols-1 gap-3 rounded-3xl bg-white/95 p-3 shadow-card ring-1 ring-neutral-200 backdrop-blur pointer-events-auto sm:grid-cols-[1fr_240px]">
+              <div className="rounded-2xl bg-black px-4 py-3 text-white">
+                <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-black text-black">
+                  {awaitingNextModeSelection ? `다음 과업 선택 대기 ${Math.min((pendingNextStep ?? step) + 1, total)}/${total}` : `사용성 평가 과업 ${step + 1}/${total}`}
+                </div>
+                <div className="mt-2 text-sm font-black leading-relaxed">
+                  {awaitingNextModeSelection ? "완료팝업 확인 후 하단 오른쪽 패널에서 다음 과업의 팝업 해제방식을 선택해주세요." : task ? task.message : "과업을 확인한 뒤 해당 제품을 탐색해 주세요."}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/80">
+                  <span>진행 상태</span>
+                  <span className={["rounded-full px-2 py-1 font-black", popupOpen ? "bg-rose-500 text-white" : popupCompleted ? "bg-emerald-500 text-white" : "bg-white/15 text-white"].join(" ")}>
+                    {awaitingNextModeSelection ? "해제방식 선택 대기" : popupOpen ? "팝업 해제 중" : popupCompleted ? "팝업 해제 완료" : "과업 진행 중"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-neutral-200">
+                <div className="text-xs font-bold text-neutral-700">UX 테스트 패널</div>
+                <div className="mt-2 text-[11px] text-neutral-500">{awaitingNextModeSelection ? "다음 과업 해제방식 선택" : "팝업 해제 방식 선택"}</div>
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value)}
+                  className="mt-2 w-full rounded-xl bg-neutral-100 ring-1 ring-neutral-200 px-3 py-2 text-sm font-semibold outline-none"
+                >
+                  {awaitingNextModeSelection ? <option value="">해제방식을 선택해주세요</option> : null}
+                  <option value={DISMISSAL.SWIPE}>밀어내기</option>
+                  <option value={DISMISSAL.SCROLL}>스크롤</option>
+                  <option value={DISMISSAL.BACKDROP}>화면 탭</option>
+                  <option value={DISMISSAL.CLOSE_BUTTON}>닫기 버튼</option>
+                  <option value={DISMISSAL.AUTO}>타이머</option>
+                </select>
+                <div className="mt-2 text-[11px] text-neutral-500 leading-snug">
+                  {/* [수정] 선택 창 오른쪽에는 해제방식 안내만 유지 */}
+                  {awaitingNextModeSelection ? "해제방식을 선택하면 다음 과업이 시작됩니다." : <>탐색 중 · 필터 조작 중 · 상품 클릭 중 · 상세페이지 진입 시 · 스크롤 중<br />무작위 시점에 해당 팝업이 뜹니다.</>}
+                </div>
               </div>
             </div>
           </div>
@@ -948,6 +1069,7 @@
               // 0초 도달 — X 버튼 표시
               <button
                 onClick={onClose}
+                data-popup-close="true"
                 className="w-[52px] h-[52px] rounded-full bg-neutral-900 hover:bg-neutral-700 active:scale-[0.96] transition flex items-center justify-center"
                 aria-label="닫기"
               >
@@ -989,9 +1111,9 @@
           badge: "바깥 탭으로 닫기",
           discount: "25%",
           items: [
-            { image: "clothe5",  title: "블랙 와이드 팬츠",   price: "28,000원" },
+            { image: "clothe5",  title: "와이드 히든 밴딩 슬랙스 [블랙]",   price: "45,900원" },
             { image: "clothe6",  title: "그레이 미니스커트",  price: "29,500원" },
-            { image: "clothe9",  title: "블랙 카고 롱스커트", price: "34,500원" },
+            { image: "clothe9",  title: "빅 포켓 카고 스커트 블랙", price: "108,000원" },
             { image: "clothe10", title: "폴카도트 롱스커트",  price: "20,000원" },
           ],
         },
@@ -1000,7 +1122,7 @@
           badge: "닫기 버튼으로 닫기",
           discount: "10%",
           items: [
-            { image: "hat1",   title: "aeae 로고 볼캡",       price: "39,000원" },
+            { image: "hat1",   title: "WEB LOGO TWO TONE BALL CAP",       price: "49,000원" },
             { image: "hat2",   title: "Chapeau 볼캡",         price: "24,000원" },
             { image: "hat5",   title: "Circle 볼캡",          price: "20,000원" },
             { image: "hat6",   title: "TEKET 그린 볼캡",      price: "20,000원" },
@@ -1023,6 +1145,9 @@
         const content = POPUP_CONTENT[mode] || POPUP_CONTENT[DISMISSAL.SCROLL];
         const [visible, setVisible] = React.useState(false);
         const [mounted, setMounted] = React.useState(false);
+        // [수정] 팝업 fade in/out 속도를 기존보다 조금 느리게 조정
+        const POPUP_FADE_IN_MS = 900;
+        const POPUP_FADE_OUT_MS = 700;
 
         React.useEffect(() => {
           if (open) {
@@ -1032,7 +1157,7 @@
             });
           } else {
             setVisible(false);
-            const t = window.setTimeout(() => setMounted(false), 1600);
+            const t = window.setTimeout(() => setMounted(false), POPUP_FADE_OUT_MS + 120);
             return () => window.clearTimeout(t);
           }
         }, [open]);
@@ -1055,7 +1180,7 @@
             {/* dim layer */}
             <div
               className="fixed inset-0 z-50 bg-black/45"
-              style={{ opacity: visible ? 1 : 0, transition: "opacity 1.5s ease" }}
+              style={{ opacity: visible ? 1 : 0, transition: `opacity ${visible ? POPUP_FADE_IN_MS : POPUP_FADE_OUT_MS}ms ease` }}
             />
             <div
               className="fixed inset-0 z-50 flex items-center justify-center px-4"
@@ -1070,8 +1195,8 @@
                     : `translate3d(${flyStyle.x}px, ${flyStyle.y + 32}px, 0) rotate(${flyStyle.rot}deg)`,
                   opacity: visible ? flyStyle.opacity : 0,
                   transition: flyStyle.transitioning
-                    ? "transform 200ms ease, opacity 200ms ease"
-                    : "transform 1.5s cubic-bezier(0.16,1,0.3,1), opacity 1.5s ease",
+                    ? "transform 260ms ease, opacity 260ms ease"
+                    : `transform ${visible ? POPUP_FADE_IN_MS : POPUP_FADE_OUT_MS}ms cubic-bezier(0.16,1,0.3,1), opacity ${visible ? POPUP_FADE_IN_MS : POPUP_FADE_OUT_MS}ms ease`,
                 }}
                 role="dialog"
                 aria-modal="false"
@@ -1083,9 +1208,8 @@
                       <div className="text-xs font-semibold text-neutral-500">프로모션</div>
                       <div className="mt-1 text-lg font-black">{content.title}</div>
                       <div className="mt-1 text-sm text-neutral-600">
-                        {mode === DISMISSAL.AUTO
-                          ? "10초 후 우측 상단에 × 버튼이 나타납니다. 버튼을 클릭하면 팝업이 닫힙니다."
-                          : <>화면을 <span className="font-bold text-neutral-900">{DISMISSAL_LABEL[mode]}</span>하여 팝업을 닫을 수 있습니다.</>}
+                        {/* [수정] 해제방식별 설명 문장을 실제 동작과 일치하도록 수정 */}
+                        {DISMISSAL_INSTRUCTION[mode]}
                       </div>
                     </div>
 
@@ -1097,13 +1221,17 @@
                     )}
                     {/* 닫기 버튼 — CLOSE_BUTTON 모드에서만 */}
                     {mode === DISMISSAL.CLOSE_BUTTON && (
+                      <>
+                      {/* [수정] X 버튼 해제 조건의 버튼 크기를 확대 */}
                       <button
                         onClick={onCloseClick}
-                        className="shrink-0 h-10 w-10 rounded-full bg-neutral-100 hover:bg-neutral-200 active:scale-[0.98] transition flex items-center justify-center"
+                        data-popup-close="true"
+                        className="shrink-0 h-14 w-14 rounded-full bg-neutral-100 hover:bg-neutral-200 active:scale-[0.98] transition flex items-center justify-center ring-1 ring-neutral-300"
                         aria-label="닫기"
                       >
-                        <span className="text-lg leading-none">×</span>
+                        <span className="text-3xl leading-none">×</span>
                       </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -1140,15 +1268,8 @@
 
                 {/* ── 힌트 ── */}
                 <div className="px-5 pb-4 text-xs text-neutral-400">
-                  {mode === DISMISSAL.SCROLL
-                    ? "💡 페이지를 스크롤하면 팝업이 닫힙니다."
-                    : mode === DISMISSAL.SWIPE
-                    ? "💡 화면 어디서든 크게 밀어내면 닫힙니다."
-                    : mode === DISMISSAL.BACKDROP
-                    ? "💡 팝업 바깥 영역을 탭하면 닫힙니다."
-                    : mode === DISMISSAL.CLOSE_BUTTON
-                    ? "💡 우측 상단 × 버튼을 클릭하면 닫힙니다."
-                    : "💡 10초 타이머 종료 후 나타나는 × 버튼을 클릭하면 닫힙니다."}
+                  {/* [수정] 하단 힌트도 해제방식별 정확한 문장으로 통일 */}
+                  💡 {DISMISSAL_INSTRUCTION[mode]}
                 </div>
               </div>
             </div>
@@ -1163,10 +1284,10 @@
               emoji: "🫧",
               image: "hat1",
               brand: "AEAE",
-              title: "aeae 로고 볼캡 · 베이지 브라운",
-              discountPct: 20,
-              price: "39,000원",
-              originalPrice: "49,000원",
+              title: "WEB LOGO TWO TONE BALL CAP - [BEIGE/NAVY]",
+              discountPct: 0,
+              price: "49,000원",
+              originalPrice: "",
               rating: "4.6",
               reviewCount: 121,
               soldOut: false,
@@ -1200,6 +1321,8 @@
               image: "hat4",
               brand: "448C",
               title: "PLAY 448C 볼캡 · 로얄 블루",
+              // [수정] 과업 탐색어와 실제 상품명을 모두 매칭하기 위한 키워드 추가
+              keywords: "play 448c 볼캡 플레이 사사팔씨 448씨",
               discountPct: 0,
               price: "55,000원",
               originalPrice: "",
@@ -1234,11 +1357,13 @@
             {
               emoji: "✏️",
               image: "shoes1",
-              brand: "Adidas",
-              title: "슈퍼스타 스니커즈 · 블랙 화이트",
-              discountPct: 15,
-              price: "42,000원",
-              originalPrice: "49,000원",
+              brand: "ADIDAS",
+              title: "슈퍼스타 - 블랙:화이트 / EG4959",
+              // [수정] 과업 탐색어 매칭 키워드 추가
+              keywords: "슈퍼스타 superstar adidas 아디다스",
+              discountPct: 0,
+              price: "139,000원",
+              originalPrice: "",
               rating: "4.5",
               reviewCount: 156,
               soldOut: false,
@@ -1248,6 +1373,8 @@
               image: "act1",
               brand: "Marimekko",
               title: "우니코 플라워 카라비너 키링 · 블랙",
+              // [수정] 과업 탐색어 매칭 키워드 추가
+              keywords: "우니코 플라워 카라비너 키링 unico flower keyring",
               discountPct: 0,
               price: "29,000원",
               originalPrice: "",
@@ -1260,11 +1387,11 @@
             {
               emoji: "👕",
               image: "clothe1",
-              brand: "Stussy",
-              title: "그래픽 오버핏 반팔 티셔츠 · 옐로우",
-              discountPct: 20,
-              price: "25,500원",
-              originalPrice: "32,000원",
+              brand: "STUSSY",
+              title: "스투시 FEELIN IRIE TEE (옐로우) 반팔티셔츠",
+              discountPct: 0,
+              price: "49,000원",
+              originalPrice: "",
               rating: "4.5",
               reviewCount: 312,
               soldOut: false,
@@ -1298,6 +1425,8 @@
               image: "clothe4",
               brand: "베이직웨어",
               title: "코듀로이 오버핏 자켓 · 민트 블루",
+              // [수정] 띄어쓰기 없는 과업명도 매칭되도록 키워드 추가
+              keywords: "코듀로이 오버핏자켓 오버핏 자켓 jacket",
               discountPct: 0,
               price: "26,000원",
               originalPrice: "",
@@ -1370,10 +1499,12 @@
             {
               emoji: "👖",
               image: "clothe5",
-              brand: "캐주얼랩",
-              title: "블랙 와이드 팬츠 · 루즈핏 하의",
+              brand: "MUSINSA STANDARD",
+              title: "와이드 히든 밴딩 슬랙스 [블랙]",
+              // [수정] 과업 탐색어 매칭 키워드 추가
+              keywords: "와이드 히든 밴딩 슬랙스 블랙 팬츠 pants",
               discountPct: 0,
-              price: "43,500원",
+              price: "45,900원",
               originalPrice: "",
               rating: "4.6",
               reviewCount: 267,
@@ -1394,11 +1525,11 @@
             {
               emoji: "👗",
               image: "clothe9",
-              brand: "스트릿무드",
-              title: "블랙 카고 롱스커트 · 포켓 디테일",
-              discountPct: 25,
-              price: "20,000원",
-              originalPrice: "24,500원",
+              brand: "YOUNGOH",
+              title: "빅 포켓 카고 스커트 블랙",
+              discountPct: 0,
+              price: "108,000원",
+              originalPrice: "",
               rating: "4.5",
               reviewCount: 203,
               soldOut: false,
@@ -1475,12 +1606,35 @@
         const [categoryTab, setCategoryTab] = useState("all");
 
         // ux test state
-        const [mode, setMode] = useState(DISMISSAL.SWIPE);
+        const [mode, setMode] = useState(UX_TASKS[0].mode);
+        // [수정] 5단계 과업 흐름 상태 추가
+        const [taskStep, setTaskStep] = useState(0);
+        const currentTask = UX_TASKS[taskStep] || null;
+        // [수정] 과업 내용 표시 전 상단 알림창을 먼저 띄우기 위한 상태 추가
+        const [taskNoticeOpen, setTaskNoticeOpen] = useState(true);
         const [toast, setToast] = useState({ visible: false, text: "" });
         const [popupOpen, setPopupOpen] = useState(false);
         const [popupScheduled, setPopupScheduled] = useState(false);
+        // [수정] 각 과업에서 팝업이 실제로 해제된 뒤에만 목표 상품 장바구니 담기를 완료 처리
+        const [taskPopupCompleted, setTaskPopupCompleted] = useState(false);
+        // [수정] 과업마다 팝업 노출 시점을 무작위로 지정: 탐색 중 / 필터 조작 중 / 상세페이지 진입 시
+        const [popupTriggerStage, setPopupTriggerStage] = useState("search");
+        const popupTriggeredThisTaskRef = useRef(false);
+        // [수정] 팝업이 장바구니 클릭 시점에 몰리지 않도록 탐색 행동 횟수 기반 랜덤 트리거 추가
+        const taskInteractionCountRef = useRef(0);
+        const randomPopupThresholdRef = useRef(2);
+        // [수정] 과업 완료 후 다음 과업 선택을 유도하는 모달 상태 추가
+        const [nextTaskModal, setNextTaskModal] = useState(null);
+        // [수정] 완료팝업 확인 후 오른쪽 패널에서 해제방식을 선택해야 다음 과업으로 이동하도록 제어
+        const [awaitingNextModeSelection, setAwaitingNextModeSelection] = useState(false);
+        const [pendingNextStep, setPendingNextStep] = useState(null);
+        const [selectedTaskModes, setSelectedTaskModes] = useState({});
 
         const scheduleTimerRef = useRef(null);
+        // [수정] 코듀로이 오버핏 자켓 과업 전용 랜덤 팝업 타이머
+        const corduroyRandomTimerRef = useRef(null);
+        // [수정] 스크롤 해제방식은 사용자가 스크롤을 멈춘 뒤 2초 후 팝업이 뜨도록 제어
+        const scrollIdleTimerRef = useRef(null);
         const openAtRef = useRef(0);
         const openScrollYRef = useRef(0);
         const popupRef = useRef(null);
@@ -1538,6 +1692,25 @@
           window.setTimeout(() => setToast((t) => ({ ...t, visible: false })), 2000);
         }, []);
 
+        // [수정] 현재 과업 단계에 맞춰 해제방식을 자동 적용
+        useEffect(() => {
+          if (!currentTask) return;
+          setMode(selectedTaskModes[taskStep] || currentTask.mode);
+          // [수정] 새 과업으로 넘어갈 때 팝업 해제 완료 상태 초기화
+          setTaskPopupCompleted(false);
+          // [수정] 새 과업마다 팝업 노출 지점을 하나로 고정하지 않고 과업 진행 중 다양한 지점에서 무작위 발생하도록 초기화
+          const stages = ["explore", "filter", "product_click", "detail", "scroll"];
+          const nextStage = stages[Math.floor(Math.random() * stages.length)];
+          setPopupTriggerStage(nextStage);
+          popupTriggeredThisTaskRef.current = false;
+          taskInteractionCountRef.current = 0;
+          // [수정] 과업 시작 직후 바로 뜨지 않도록 최소 행동 수를 2~5회 사이에서 무작위로 설정
+          randomPopupThresholdRef.current = 2 + Math.floor(Math.random() * 4);
+          // [수정] 새 과업마다 과업 안내를 선택 패널 왼쪽에 바로 표시
+          setTaskNoticeOpen(false);
+          log("[popup_trigger_stage_select]", { taskStep, preferredStage: nextStage, threshold: randomPopupThresholdRef.current, mode: currentTask.mode });
+        }, [currentTask?.mode, taskStep, selectedTaskModes]);
+
         const openPopup = useCallback(
           (reason) => {
             if (popupOpenRef.current) return;
@@ -1549,20 +1722,111 @@
             openScrollYRef.current = window.scrollY || 0;
             const m = modeRef.current;
             log("[popup_open]", { mode: m, label: DISMISSAL_LABEL[m], reason, scrollY: openScrollYRef.current });
-            showToast(`팝업이 등장했습니다. 화면을 “${DISMISSAL_LABEL[m]}”하여 닫아보세요.`);
+            showToast(`팝업이 등장했습니다. ${DISMISSAL_INSTRUCTION[m]}`);
           },
           [resetInvalid, showToast]
         );
 
         const schedulePopup = useCallback(
-          (reason, minMs = 3000, maxMs = 5000) => {
+          (reason, minMs = 2500, maxMs = 7000, options = {}) => {
             if (dismissCooldownRef.current) return;
             if (scheduleTimerRef.current) window.clearTimeout(scheduleTimerRef.current);
+            if (scrollIdleTimerRef.current) window.clearTimeout(scrollIdleTimerRef.current);
+          if (corduroyRandomTimerRef.current) window.clearTimeout(corduroyRandomTimerRef.current);
             setPopupScheduled(true);
             const delay = minMs + Math.floor(Math.random() * Math.max(1, maxMs - minMs));
-            scheduleTimerRef.current = window.setTimeout(() => openPopup(reason), delay);
+
+            // [수정] 스크롤 해제방식은 스크롤 중 바로 노출되면 즉시 해제될 수 있으므로
+            // [수정] 랜덤 트리거 후에도 사용자가 2초 동안 멈춰 있을 때만 팝업을 실제로 표시
+            const openAfterScrollIdle = () => {
+              if (modeRef.current !== DISMISSAL.SCROLL || options.forceImmediate) {
+                openPopup(reason);
+                return;
+              }
+
+              const resetIdleTimer = () => {
+                if (scrollIdleTimerRef.current) window.clearTimeout(scrollIdleTimerRef.current);
+                scrollIdleTimerRef.current = window.setTimeout(() => {
+                  window.removeEventListener("scroll", resetIdleTimer);
+                  window.removeEventListener("wheel", resetIdleTimer);
+                  window.removeEventListener("touchmove", resetIdleTimer);
+                  openPopup(`${reason}_after_2s_scroll_idle`);
+                }, 2000);
+              };
+
+              resetIdleTimer();
+              window.addEventListener("scroll", resetIdleTimer, { passive: true });
+              window.addEventListener("wheel", resetIdleTimer, { passive: true });
+              window.addEventListener("touchmove", resetIdleTimer, { passive: true });
+            };
+
+            scheduleTimerRef.current = window.setTimeout(openAfterScrollIdle, delay);
           },
           [openPopup]
+        );
+
+
+        // [수정] 코듀로이 오버핏 자켓 과업은 특정 이벤트에만 묶이지 않도록 과업 진행 중 3~8초 사이 무작위 타이밍에 팝업 노출
+        useEffect(() => {
+          if (!currentTask) return;
+          if (taskStep !== 1) return;
+          if (taskPopupCompleted) return;
+
+          if (corduroyRandomTimerRef.current) window.clearTimeout(corduroyRandomTimerRef.current);
+          // [수정] 너무 빠른 노출을 방지하기 위해 과업 시작 후 3~8초 사이 무작위 타이밍에 노출
+          const randomDelay = 3000 + Math.floor(Math.random() * 5000);
+
+          corduroyRandomTimerRef.current = window.setTimeout(() => {
+            if (taskPopupCompleted) return;
+            if (popupOpenRef.current) return;
+            if (popupTriggeredThisTaskRef.current) return;
+
+            popupTriggeredThisTaskRef.current = true;
+            schedulePopup("corduroy_task_random_time_trigger", 0, 1, { forceImmediate: true });
+            log("[corduroy_random_popup_scheduled]", { taskStep, randomDelay, mode: currentTask.mode });
+          }, randomDelay);
+
+          return () => {
+            if (corduroyRandomTimerRef.current) window.clearTimeout(corduroyRandomTimerRef.current);
+          };
+        }, [currentTask, taskStep, taskPopupCompleted, schedulePopup]);
+
+        // [수정] 상세페이지·장바구니에 고정되지 않도록 탐색 행동마다 확률과 행동 횟수를 함께 판단하여 랜덤 노출
+        const maybeTriggerTaskPopup = useCallback(
+          // [수정] 과업 시작 직후가 아닌 탐색 과정 중 자연스러운 무작위 타이밍에 팝업이 뜨도록 기본 예약 시간을 조정
+          (stage, reason, minMs = 2500, maxMs = 7000) => {
+            if (!currentTask) return;
+            if (taskPopupCompleted) return;
+            if (popupOpenRef.current) return;
+            if (popupTriggeredThisTaskRef.current) return;
+
+            taskInteractionCountRef.current += 1;
+            const interactionCount = taskInteractionCountRef.current;
+            const isPreferredStage = popupTriggerStage === stage;
+            // [수정] 너무 빠르게 확정되지 않도록 확률을 낮춰 과업 중간의 무작위성을 강화
+            const probability = isPreferredStage ? 0.65 : 0.38;
+            const reachedThreshold = interactionCount >= randomPopupThresholdRef.current;
+            const randomMatched = Math.random() < probability;
+
+            log("[popup_random_trigger_check]", {
+              taskStep,
+              stage,
+              reason,
+              interactionCount,
+              threshold: randomPopupThresholdRef.current,
+              preferredStage: popupTriggerStage,
+              randomMatched,
+            });
+
+            if (!reachedThreshold && !isPreferredStage) return;
+            // [수정] 5번째 행동 이후에는 확률 실패에도 팝업을 예약해 너무 늦어지는 것을 방지
+            if (!randomMatched && interactionCount < 5) return;
+
+            popupTriggeredThisTaskRef.current = true;
+            schedulePopup(reason, minMs, maxMs);
+            log("[popup_random_trigger_matched]", { taskStep, stage, reason, mode: currentTask.mode });
+          },
+          [currentTask, taskPopupCompleted, popupTriggerStage, schedulePopup, taskStep, awaitingNextModeSelection]
         );
 
         const dismissPopup = useCallback(
@@ -1584,45 +1848,73 @@
               elapsedHuman: formatMs(elapsed),
               invalidAttempts: { ...invalidCountsRef.current },
             });
+            // [수정] 과업 중 노출된 팝업을 해제했음을 기록하여 이후 장바구니 완료 처리 가능
+            setTaskPopupCompleted(true);
           },
           []
         );
 
-        // mode change => 팝업 닫고 새 모드로 즉시 재스케줄 (5~8초 뒤)
+        // [수정] 모드 변경 시 자동 팝업 노출은 제거하고, 탐색 행동 중 랜덤 지점에서만 팝업이 뜨도록 변경
         useEffect(() => {
           log("[mode_select]", { mode, label: DISMISSAL_LABEL[mode] });
-          showToast(`${DISMISSAL_LABEL[mode]} 해제 모드가 적용되었습니다. 상품을 탐색해 보세요.`);
+          showToast(`${DISMISSAL_LABEL[mode]} 해제방식이 적용되었습니다. 제품 탐색 중 무작위 시점에 팝업이 나타납니다.`);
 
-          // 기존 팝업 닫기
           popupOpenRef.current = false;
           setPopupOpen(false);
           setPopupScheduled(false);
           resetInvalid();
-          dismissCooldownRef.current = false; // 모드 변경 시 쿨다운 즉시 해제
+          dismissCooldownRef.current = false;
 
-          // 모드 변경 시 새 팝업 스케줄 (5~8초 뒤)
           if (scheduleTimerRef.current) window.clearTimeout(scheduleTimerRef.current);
-          setPopupScheduled(true);
-          const delay = 3000 + Math.floor(Math.random() * 2000);
-          scheduleTimerRef.current = window.setTimeout(() => openPopup("timer_after_mode_select"), delay);
-
+          // [수정] 모드 변경 시 스크롤 멈춤 대기 타이머도 함께 초기화
+          if (scrollIdleTimerRef.current) window.clearTimeout(scrollIdleTimerRef.current);
           return () => {
             if (scheduleTimerRef.current) window.clearTimeout(scheduleTimerRef.current);
+            if (scrollIdleTimerRef.current) window.clearTimeout(scrollIdleTimerRef.current);
           };
         }, [mode]);
 
-        // view change => 같은 모드이므로 팝업 재스케줄 안 함 (이미 스케줄된 것 유지)
+        // view change => 같은 모드이므로 팝업 재스케줄 안 함
 
-        // scroll depth trigger while scheduled (3~5s timer보다 먼저 도달하면 즉시)
+
+        // [수정] 다른 상품을 찾아보는 스크롤/휠/터치 이동도 과업 수행 과정으로 간주하여 팝업 노출 후보에 포함
+        const exploreScrollTickRef = useRef({ lastTime: 0, totalDelta: 0, lastTouchY: null });
+        const handleExploreScrollGesture = useCallback((source, delta = 0) => {
+          if (view !== "list") return;
+          if (awaitingNextModeSelection) return;
+            if (!currentTask || taskPopupCompleted || popupOpenRef.current || popupTriggeredThisTaskRef.current) return;
+
+          const absDelta = Math.abs(delta || 0);
+          const now = nowMs();
+          const bucket = exploreScrollTickRef.current;
+          bucket.totalDelta += absDelta;
+
+          // [수정] 미세한 스크롤마다 바로 뜨지 않도록 누적 이동량과 시간 간격을 함께 확인
+          if (bucket.totalDelta < 220 && now - bucket.lastTime < 650) return;
+          bucket.totalDelta = 0;
+          bucket.lastTime = now;
+
+          // [수정] 상품 리스트 스크롤 탐색 중 빠른 타이밍에 팝업 후보가 되도록 예약 시간 단축
+          maybeTriggerTaskPopup("scroll", `task_product_browsing_${source}_random_trigger`, 2500, 7000);
+        }, [view, currentTask, taskPopupCompleted, maybeTriggerTaskPopup]);
+
+        // [수정] 상품 탐색 중 스크롤 자체도 랜덤 팝업 노출 후보로 사용하되 장바구니 클릭과는 분리
         useEffect(() => {
-          if (!popupScheduled || popupOpen) return;
-          const threshold = 650;
+          if (view !== "list") return;
+          let lastY = window.scrollY || 0;
           const onScroll = () => {
-            if ((window.scrollY || 0) >= threshold) openPopup("scroll_depth_trigger");
+            const y = window.scrollY || 0;
+            // [수정] 리스트 스크롤을 더 민감하게 감지하여 다른 상품 탐색 중에도 팝업 후보가 되도록 조정
+            if (Math.abs(y - lastY) < 90) return;
+            const delta = y - lastY;
+            lastY = y;
+            handleExploreScrollGesture("window_scroll", delta);
+            // [수정] 스크롤 탐색 중 팝업 예약 시간 단축
+            maybeTriggerTaskPopup("scroll", "task_explore_scroll_random_trigger", 2500, 7000);
           };
           window.addEventListener("scroll", onScroll, { passive: true });
           return () => window.removeEventListener("scroll", onScroll);
-        }, [popupScheduled, popupOpen, openPopup]);
+        }, [view, maybeTriggerTaskPopup, handleExploreScrollGesture]);
 
         // dismissal: Scroll-to-dismiss (page level)
         useEffect(() => {
@@ -1690,6 +1982,8 @@
         useEffect(() => {
           if (!popupOpen) return;
           const onPointerDownCapture = (e) => {
+            // [수정] 유효한 X 버튼 클릭은 잘못된 시도로 기록하지 않음
+            if (e.target?.closest?.('[data-popup-close="true"]')) return;
             const rect = popupRef.current?.getBoundingClientRect?.();
             const inside =
               rect &&
@@ -1740,7 +2034,9 @@
           if (!popupOpen) return;
           if (mode !== DISMISSAL.SWIPE) return;
 
-          const threshold = 160;
+          // [수정] 앱 사용 시 좌우 밀어내기가 더 쉽게 인식되도록 기준을 낮추고 가로 방향을 우선 판정
+          const threshold = 80;
+          const horizontalThreshold = 60;
           let dragging = false;
           let start = { x: 0, y: 0 };
           let last = { x: 0, y: 0 };
@@ -1766,10 +2062,10 @@
             const dx = last.x;
             const dy = last.y;
             const dist = Math.hypot(dx, dy);
-            if (dist >= threshold) {
+            if (Math.abs(dx) >= horizontalThreshold || dist >= threshold) {
               setFlyStyle({
-                x: dx * 2.3,
-                y: dy * 2.3,
+                x: (dx === 0 ? (dx >= 0 ? 1 : -1) : dx) * 3.2,
+                y: dy * 1.4,
                 rot: clamp(dx / 12, -18, 18),
                 opacity: 0,
                 transitioning: true,
@@ -1795,7 +2091,12 @@
           };
         }, [popupOpen, mode, dismissPopup, invalid]);
 
-        const onSearch = () => log("[ui_search]", { query });
+        // [수정] 검색 과업이 아니라 제품 탐색 행동의 일부로 기록하고 랜덤 팝업 후보로만 사용
+        const onSearch = () => {
+          log("[ui_explore_query]", { query, taskStep, target: currentTask?.targetTitle, popupTriggerStage });
+          // [수정] 탐색어 입력 이후에도 빠르게 팝업 후보가 되도록 예약 시간 단축
+          maybeTriggerTaskPopup("explore", "task_query_explore_random_trigger", 2500, 7000);
+        };
 
         const baseFiltered = useMemo(() => {
           let list = products;
@@ -1804,7 +2105,15 @@
           if (excludeLowQuality) list = list.filter((p) => Number(p.rating) >= 4.2);
           if (query.trim()) {
             const q = query.trim().toLowerCase();
-            list = list.filter((p) => `${p.brand} ${p.title}`.toLowerCase().includes(q));
+            // [수정] 공백이 있는 탐색어와 공백이 붙은 탐색어를 모두 처리
+            const normalizeText = (value) => String(value || "").toLowerCase().replace(/\s+/g, "");
+            const tokens = q.split(/\s+/).filter(Boolean);
+            list = list.filter((p) => {
+              // [수정] 상품명 외에 오타/별칭 탐색어도 함께 반영되도록 keywords 필드 추가
+              const haystack = `${p.brand} ${p.title} ${p.keywords || ""}`.toLowerCase();
+              const compactHaystack = normalizeText(haystack);
+              return tokens.every((token) => haystack.includes(token) || compactHaystack.includes(normalizeText(token)));
+            });
           }
           return list;
         }, [products, excludeSoldOut, includeReviewOnly, excludeLowQuality, query]);
@@ -1835,8 +2144,37 @@
           } else if (sort === "rating") {
             list = [...list].sort((a, b) => Number(b.rating) - Number(a.rating));
           }
+
+          // [수정] 과업에 필요한 목표 상품은 목록의 중간 정도에 배치
+          // [수정] 같은 목표 상품이 3개 반복되어도 한곳에 몰리지 않도록 주변 상품 사이에 섞어 배치
+          if (currentTask?.targetTitle) {
+            const targetTitle = currentTask.targetTitle;
+            let nonTargets = list.filter((p) => p.title !== targetTitle);
+            const targets = list.filter((p) => p.title === targetTitle);
+
+            // [수정] 탐색어가 목표 상품만 남기는 경우에도 스크롤 탐색이 가능하도록 보조 상품을 함께 노출
+            if (targets.length > 0 && nonTargets.length < 8) {
+              const filler = products
+                .filter((p) => p.title !== targetTitle)
+                .filter((p) => categoryTab === "all" || categoryTab === "new" || categoryTab === "popular" || p.shopCategory === categoryTab)
+                .filter((p) => !nonTargets.some((n) => n.id === p.id))
+                .slice(0, 12 - nonTargets.length);
+              nonTargets = [...nonTargets, ...filler];
+            }
+
+            if (targets.length > 0) {
+              const mixed = [...nonTargets];
+              const center = Math.max(2, Math.floor(mixed.length / 2) - Math.floor(targets.length / 2));
+              targets.forEach((target, idx) => {
+                // [수정] 3개 목표 상품을 중간부에 2칸 간격으로 분산 배치
+                const insertAt = Math.min(mixed.length, center + idx * 2);
+                mixed.splice(insertAt, 0, target);
+              });
+              list = mixed;
+            }
+          }
           return list;
-        }, [baseFiltered, categoryTab, sort]);
+        }, [baseFiltered, categoryTab, sort, currentTask?.targetTitle]);
 
         const openDetail = (p) => {
           setSelectedId(p.id);
@@ -1846,6 +2184,27 @@
             setOptionMap((prev) => ({ ...prev, [p.id]: "기본" }));
           }
           log("[navigate]", { to: "detail", id: p.id, brand: p.brand, title: p.title, shopCategory: p.shopCategory });
+
+          // [수정] 스크롤 해제방식은 상세페이지 진입 시 랜덤 타이머를 기다리지 않고 즉시 팝업 노출
+          // [수정] 오른쪽 패널에서 선택한 해제방식도 반영되도록 현재 활성 mode 기준으로 판단
+          const activeDismissalMode = selectedTaskModes[taskStep] || currentTask?.mode || modeRef.current;
+          if (
+            activeDismissalMode === DISMISSAL.SCROLL &&
+            !taskPopupCompleted &&
+            !popupOpenRef.current &&
+            !popupTriggeredThisTaskRef.current
+          ) {
+            popupTriggeredThisTaskRef.current = true;
+            if (scheduleTimerRef.current) window.clearTimeout(scheduleTimerRef.current);
+            if (scrollIdleTimerRef.current) window.clearTimeout(scrollIdleTimerRef.current);
+            if (corduroyRandomTimerRef.current) window.clearTimeout(corduroyRandomTimerRef.current);
+            setPopupScheduled(false);
+            openPopup("scroll_mode_detail_immediate_trigger");
+            return;
+          }
+
+          // [수정] 그 외 해제방식은 상세페이지 진입도 무작위 노출 후보로만 사용
+          maybeTriggerTaskPopup("detail", "task_detail_random_trigger", 2500, 7000);
         };
 
         const goBack = () => {
@@ -1854,12 +2213,31 @@
         };
 
         const addToCart = (id, qty) => {
+          const addedProduct = productsById[id];
+
+          // [수정] 장바구니 클릭 시 팝업을 강제로 띄우지 않음. 팝업은 탐색 과정의 무작위 지점에서만 발생
+          if (currentTask && addedProduct?.title === currentTask.targetTitle && !taskPopupCompleted) {
+            showToast("아직 과업 중 팝업 해제가 완료되지 않았습니다. 상품을 조금 더 탐색한 뒤 다시 담아주세요.");
+            log("[cart_add_blocked_before_popup]", { id, taskStep, target: currentTask.targetTitle });
+            return;
+          }
+
           setCartItems((prev) => {
             const next = { ...prev, [id]: (prev[id] || 0) + qty };
             return next;
           });
-          log("[cart_add]", { id, qty, option: optionMap[id] || "기본" });
+          log("[cart_add]", { id, qty, option: optionMap[id] || "기본", taskStep, target: currentTask?.targetTitle });
           showToast(`장바구니에 ${qty}개 담았습니다.`);
+
+          // [수정] 목표 상품을 장바구니에 담으면 다음 과업 선택 안내 모달을 띄우도록 변경
+          if (currentTask && addedProduct?.title === currentTask.targetTitle) {
+            const nextStep = taskStep + 1;
+            window.setTimeout(() => {
+              setNextTaskModal({ completedStep: taskStep, nextStep });
+              setAwaitingNextModeSelection(false);
+              setPendingNextStep(null);
+            }, 250);
+          }
         };
 
         const buyNow = (id, qty) => {
@@ -1868,6 +2246,7 @@
         };
 
         const toggleWish = (id) => {
+          maybeTriggerTaskPopup("explore", "task_explore_wish_random_trigger", 2500, 7000);
           setWishMap((prev) => {
             const next = { ...prev, [id]: !prev[id] };
             log("[wish_toggle]", { id, wished: next[id] });
@@ -1876,6 +2255,7 @@
         };
 
         const selectOption = (id, option) => {
+          maybeTriggerTaskPopup("detail", "task_detail_option_random_trigger", 2500, 7000);
           setOptionMap((prev) => ({ ...prev, [id]: option }));
           log("[detail_option_click]", { id, option });
         };
@@ -1910,6 +2290,59 @@
           showToast("결제(프로토타입): 결제는 생략됩니다.");
         };
 
+        // [수정] 완료 모달 확인 후 오른쪽 패널에서 해제방식을 선택하도록 대기 상태로 전환
+        const continueNextTask = () => {
+          if (!nextTaskModal) return;
+          const nextStep = nextTaskModal.nextStep;
+          setNextTaskModal(null);
+          if (nextStep >= UX_TASKS.length) return;
+          setPendingNextStep(nextStep);
+          setAwaitingNextModeSelection(true);
+          setMode("");
+          showToast("하단 오른쪽 패널에서 다음 과업의 해제방식을 선택해주세요.");
+        };
+
+        // [수정] 오른쪽 패널에서 해제방식을 선택하면 그때 다음 과업으로 이동
+        const handleModeSelect = (selectedMode) => {
+          if (!selectedMode) {
+            setMode("");
+            return;
+          }
+
+          if (awaitingNextModeSelection && pendingNextStep != null) {
+            const nextStep = pendingNextStep;
+            setSelectedTaskModes((prev) => ({ ...prev, [nextStep]: selectedMode }));
+            setMode(selectedMode);
+            setTaskStep(nextStep);
+            setTaskPopupCompleted(false);
+            popupTriggeredThisTaskRef.current = false;
+            taskInteractionCountRef.current = 0;
+            // [수정] 과업 시작 직후 바로 뜨지 않도록 최소 행동 수를 2~5회 사이에서 무작위로 설정
+          randomPopupThresholdRef.current = 2 + Math.floor(Math.random() * 4);
+            setQuery("");
+            setCategoryTab("all");
+            setSort("accuracy");
+            setView("list");
+            setTaskNoticeOpen(false);
+            setAwaitingNextModeSelection(false);
+            setPendingNextStep(null);
+            showToast("선택한 해제방식으로 다음 과업을 시작합니다.");
+            log("[next_task_mode_selected]", { nextStep, selectedMode });
+            return;
+          }
+
+          setMode(selectedMode);
+          showToast(`${DISMISSAL_LABEL[selectedMode]} 해제방식이 적용되었습니다. 제품 탐색 중 무작위 시점에 팝업이 나타납니다.`);
+        };
+
+        const finishTasks = () => {
+          setNextTaskModal(null);
+          setAwaitingNextModeSelection(false);
+          setPendingNextStep(null);
+          setQuery("");
+          setView("cart");
+        };
+
         return (
           <div className="min-h-screen bg-neutral-50">
             <Toast visible={toast.visible} text={toast.text} />
@@ -1923,16 +2356,34 @@
               onBack={goBack}
               cartCount={cartCount}
               onCart={openCart}
+              task={currentTask}
             />
 
+            {/* [수정] 과업 안내는 별도 상단 팝업 대신 하단 선택 패널 왼쪽에 처음부터 표시 */}
+
             {view === "list" ? (
-              <div className="mx-auto max-w-[980px] px-4">
+              <>
+              {/* [수정] 과업 안내를 하단 패널로 이동하여 상단 여백을 기본값으로 복원 */}
+              <div
+                className="mx-auto max-w-[980px] px-4 pt-4 pb-[190px]"
+                // [수정] 상품 리스트 영역에서 다른 상품을 찾아보는 휠/터치 이동도 팝업 랜덤 노출 조건에 포함
+                onWheel={(e) => handleExploreScrollGesture("wheel", e.deltaY)}
+                onTouchMove={(e) => {
+                  const y = e.touches?.[0]?.clientY;
+                  const prev = exploreScrollTickRef.current.lastTouchY;
+                  if (prev != null && y != null) handleExploreScrollGesture("touch_scroll", prev - y);
+                  exploreScrollTickRef.current.lastTouchY = y;
+                }}
+                onTouchEnd={() => { exploreScrollTickRef.current.lastTouchY = null; }}
+                onScroll={(e) => handleExploreScrollGesture("list_scroll", e.currentTarget.scrollTop || window.scrollY || 0)}
+              >
                 <CategoryBar
                   active={categoryTab}
                   counts={categoryCounts}
                   onSelect={(id) => {
                     setCategoryTab(id);
                     log("[ui_category]", { category: id });
+                    maybeTriggerTaskPopup("filter", "task_explore_category_random_trigger", 2500, 7000);
                   }}
                 />
                 <div className="pt-3 pb-2">
@@ -1943,7 +2394,7 @@
                     <div className="flex items-center gap-2">
                       <select
                         value={sort}
-                        onChange={(e) => (setSort(e.target.value), log("[ui_sort]", { sort: e.target.value }))}
+                        onChange={(e) => (setSort(e.target.value), log("[ui_sort]", { sort: e.target.value }), maybeTriggerTaskPopup("filter", "task_explore_sort_random_trigger", 2500, 7000))}
                         className="rounded-xl bg-white ring-1 ring-neutral-200 px-3 py-2 text-sm font-semibold outline-none"
                       >
                         <option value="accuracy">정확도순</option>
@@ -1960,6 +2411,7 @@
                           setExcludeLowQuality(false);
                           setCategoryTab("all");
                           log("[ui_click]", { type: "reset_filters" });
+                          maybeTriggerTaskPopup("filter", "task_explore_filter_reset_random_trigger", 2500, 7000);
                         }}
                       >
                         전체해제
@@ -1973,7 +2425,7 @@
                         <input
                           type="checkbox"
                           checked={includeReviewOnly}
-                          onChange={(e) => (setIncludeReviewOnly(e.target.checked), log("[ui_filter]", { includeReviewOnly: e.target.checked }))}
+                          onChange={(e) => (setIncludeReviewOnly(e.target.checked), log("[ui_filter]", { includeReviewOnly: e.target.checked }), maybeTriggerTaskPopup("filter", "task_explore_filter_random_trigger", 2500, 7000))}
                         />
                         <span>후기상품</span>
                       </label>
@@ -1981,7 +2433,7 @@
                         <input
                           type="checkbox"
                           checked={excludeSoldOut}
-                          onChange={(e) => (setExcludeSoldOut(e.target.checked), log("[ui_filter]", { excludeSoldOut: e.target.checked }))}
+                          onChange={(e) => (setExcludeSoldOut(e.target.checked), log("[ui_filter]", { excludeSoldOut: e.target.checked }), maybeTriggerTaskPopup("filter", "task_explore_filter_random_trigger", 2500, 7000))}
                         />
                         <span>품절상품 제외</span>
                       </label>
@@ -1989,7 +2441,7 @@
                         <input
                           type="checkbox"
                           checked={excludeLowQuality}
-                          onChange={(e) => (setExcludeLowQuality(e.target.checked), log("[ui_filter]", { excludeLowQuality: e.target.checked }))}
+                          onChange={(e) => (setExcludeLowQuality(e.target.checked), log("[ui_filter]", { excludeLowQuality: e.target.checked }), maybeTriggerTaskPopup("filter", "task_explore_filter_random_trigger", 2500, 7000))}
                         />
                         <span>저평점 제외</span>
                       </label>
@@ -1997,19 +2449,31 @@
                   </div>
                 </div>
 
-                <div className="pb-28 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div
+                  className="pb-28 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
+                  // [수정] 상품 카드 사이를 탐색하며 스크롤하는 과정에서도 팝업이 뜰 수 있도록 상품 그리드에 동일 조건 적용
+                  onWheel={(e) => handleExploreScrollGesture("product_grid_wheel", e.deltaY)}
+                  onTouchMove={(e) => {
+                    const y = e.touches?.[0]?.clientY;
+                    const prev = exploreScrollTickRef.current.lastTouchY;
+                    if (prev != null && y != null) handleExploreScrollGesture("product_grid_touch_scroll", prev - y);
+                    exploreScrollTickRef.current.lastTouchY = y;
+                  }}
+                  onTouchEnd={() => { exploreScrollTickRef.current.lastTouchY = null; }}
+                >
                   {visibleProducts.map((p, i) => (
                     <ProductCard
                       key={p.id}
                       p={p}
                       wished={!!wishMap[p.id]}
-                      onClick={() => (log("[product_click]", { id: p.id, index: i, brand: p.brand, title: p.title }), openDetail(p))}
+                      onClick={() => (log("[product_click]", { id: p.id, index: i, brand: p.brand, title: p.title }), maybeTriggerTaskPopup("product_click", "task_explore_product_click_random_trigger", 2500, 7000), openDetail(p))}
                       onCart={() => addToCart(p.id, 1)}
                       onWish={() => toggleWish(p.id)}
                     />
                   ))}
                 </div>
               </div>
+              </>
             ) : view === "cart" ? (
               <CartPage
                 items={cartItems}
@@ -2036,8 +2500,17 @@
               <div className="mx-auto max-w-[980px] px-4 py-10 text-sm text-neutral-600">상품을 찾을 수 없습니다.</div>
             )}
 
-            <FloatingPanel mode={mode} setMode={setMode} />
+            <FloatingPanel mode={mode} setMode={handleModeSelect} task={currentTask} step={taskStep} total={UX_TASKS.length} popupOpen={popupOpen} popupCompleted={taskPopupCompleted} awaitingNextModeSelection={awaitingNextModeSelection} pendingNextStep={pendingNextStep} />
             </div>{/* end inert wrapper */}
+
+            <NextTaskModal
+              open={!!nextTaskModal}
+              completedStep={nextTaskModal?.completedStep ?? 0}
+              nextTask={UX_TASKS[nextTaskModal?.nextStep]}
+              isLast={nextTaskModal ? nextTaskModal.nextStep >= UX_TASKS.length : false}
+              onContinue={continueNextTask}
+              onFinish={finishTasks}
+            />
 
             <PromoPopup
               open={popupOpen}
